@@ -1,7 +1,7 @@
 ok: swarm-client $(SUNEC)
 	./swarm-client -help
 	./swarm-client -master $(MASTER_URL) -retry 1
-MASTER_URL = https://zeniv.linux.org.uk/
+MASTER_URL ?= https://www.google.com/
 export SUNEC = libsunec.so
 export JAVA_HOME=$(PWD)
 ARCH = $(shell dpkg --print-architecture)
