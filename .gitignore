@@ -4,3 +4,4 @@ swarm-client*.jar
 swarm-client
 swarm-config/
 libsunec.so
+jenkins.*
