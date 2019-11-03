@@ -1,12 +1,12 @@
-ok: swarm-client $(SUNEC)
+ok: swarm-client libsunec.so
+	echo Checking $@
 	./swarm-client -help
 	./swarm-client -master $(MASTER_URL) -retry 1
 MASTER_URL ?= https://www.google.com/
-export SUNEC = libsunec.so
-export JAVA_HOME=$(PWD)
 ARCH = $(shell dpkg --print-architecture)
 
-swarm-client: swarm-client.jar swarm-config native-image.id
+swarm-client: swarm-client.jar config/swarm-client native-image.id
+	echo Building $@
 	$(NATIVE_IMAGE) $(SWARM_OPTS) -jar $<
 TOCLEAN += swarm-client ./\?
 NATIVE_IMAGE = $(NATIVE_IMAGE_DOCKER) native-image --no-server --no-fallback -H:+ReportExceptionStackTraces
@@ -15,11 +15,12 @@ NATIVE_IMAGE_I = localhost/native-image:latest
 ID = $(shell id -u $(LOGNAME))
 SWARM_OPTS += --initialize-at-run-time=sun.awt.dnd.SunDropTargetContextPeer\$$EventDispatcher
 SWARM_OPTS += -H:IncludeResourceBundles=org.kohsuke.args4j.Messages
-SWARM_OPTS += -H:ConfigurationFileDirectories=swarm-config
+SWARM_OPTS += -H:ConfigurationFileDirectories=config/$@
 SWARM_OPTS += -H:IncludeResourceBundles=org.kohsuke.args4j.spi.Messages
 SWARM_OPTS += -H:EnableURLProtocols=https,http
 
 swarm-client.jar:
+	echo Fetching $@
 	wget --timestamping $(SWARM_CLIENT_URL)
 	cp -p "$${SWARM_CLIENT_URL##*/}" swarm-client.jar
 TOCLEAN += swarm-client.jar
@@ -29,22 +30,27 @@ export SWARM_CLIENT_URL = http://repo.jenkins-ci.org/releases/org/jenkins-ci/plu
 # arg4j requires heavy introspection see
 # https://github.com/oracle/graal/issues/1137 and
 # https://github.com/oracle/graal/blob/master/substratevm/CONFIGURE.md
-swarm-config: swarm-client.jar
+config/%: %.jar native-image.id
+	echo Inspecting $^ for $@
+	mkdir -p config
 	$(NATIVE_IMAGE_AGENT) -jar $< -master $(MASTER_URL) -retry 1 || true
 	$(NATIVE_IMAGE_AGENT) -jar $< -help
-TOCLEAN += swarm-config
+TOCLEAN += config
 NATIVE_IMAGE_AGENT = $(NATIVE_IMAGE_DOCKER) java -agentlib:native-image-agent=config-merge-dir=$@
 
-native-image.id: Dockerfile
-	docker image build --no-cache --tag $(NATIVE_IMAGE_I) .
+native-image.id: native-image/Dockerfile
+	echo Building docker image $(NATIVE_IMAGE_I)
+	docker image build --pull --no-cache --tag $(NATIVE_IMAGE_I) native-image
 	docker image list --quiet $(NATIVE_IMAGE_I) > $@
 TOCLEAN += native-image.id
 DOCKER_TOCLEAN += localhost/native-image:latest
 
-$(SUNEC): native-image.id
-	$(NATIVE_IMAGE_DOCKER) find /opt -name $(SUNEC) -exec cp -v '{}' $(SUNEC) ';'
+libsunec.so: native-image.id
+	echo Fetching $@
+	$(NATIVE_IMAGE_DOCKER) find /opt -name $@ -exec cp -v '{}' $@ ';'
 TOCLEAN += $(SUNEC)
 
 clean:
-	rm -rvf $(TOCLEAN)
-	docker image rm $(DOCKER_TOCLEAN)
+	echo Cleaning
+	docker image rm $(DOCKER_TOCLEAN) || true
+	rm -rvf $(TOCLEAN) || true
