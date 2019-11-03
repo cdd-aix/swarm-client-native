@@ -1,7 +1,10 @@
-ok: swarm-client
+ok: swarm-client $(SUNEC)
 	./swarm-client -help
 	./swarm-client -master $(MASTER_URL) -retry 1
 MASTER_URL = https://zeniv.linux.org.uk/
+export SUNEC = libsunec.so
+export JAVA_HOME=$(PWD)
+ARCH = $(shell dpkg --print-architecture)
 
 swarm-client: swarm-client.jar swarm-config native-image.id
 	$(NATIVE_IMAGE) $(SWARM_OPTS) -jar $<
@@ -30,13 +33,17 @@ swarm-config: swarm-client.jar
 	$(NATIVE_IMAGE_AGENT) -jar $< -master $(MASTER_URL) -retry 1 || true
 	$(NATIVE_IMAGE_AGENT) -jar $< -help
 TOCLEAN += swarm-config
-NATIVE_IMAGE_AGENT = $(NATIVE_IMAGE_DOCKER) java -agentlib:native-image-agent=config-output-dir=$@
+NATIVE_IMAGE_AGENT = $(NATIVE_IMAGE_DOCKER) java -agentlib:native-image-agent=config-merge-dir=$@
 
 native-image.id: Dockerfile
 	docker image build --no-cache --tag $(NATIVE_IMAGE_I) .
 	docker image list --quiet $(NATIVE_IMAGE_I) > $@
 TOCLEAN += native-image.id
 DOCKER_TOCLEAN += localhost/native-image:latest
+
+$(SUNEC): native-image.id
+	$(NATIVE_IMAGE_DOCKER) find /opt -name $(SUNEC) -exec cp -v '{}' $(SUNEC) ';'
+TOCLEAN += $(SUNEC)
 
 clean:
 	rm -rvf $(TOCLEAN)
