@@ -33,7 +33,7 @@ TEST_FULL = -master http://jenkins/ -username admin -password admin -retry 0
 $(SWARM_CLIENT): $(SWARM_CLIENT_JAR) config/$(SWARM_CLIENT)
 	$(NATIVE_IMAGE) $(SWARM_OPTS) -jar $<
 
-TOCLEAN += swarm-client ./\?
+TOCLEAN += $(SWARM_CLIENT) ./\?
 NATIVE_IMAGE = $(RUN_NATIVE_IMAGE) native-image --no-server --no-fallback -H:+ReportExceptionStackTraces
 SWARM_OPTS += --initialize-at-run-time=sun.awt.dnd.SunDropTargetContextPeer\$$EventDispatcher
 SWARM_OPTS += -H:IncludeResourceBundles=org.kohsuke.args4j.Messages
@@ -49,18 +49,16 @@ TOCLEAN += $(SWARM_CLIENT_JAR)
 # arg4j requires heavy introspection see
 # https://github.com/oracle/graal/issues/1137 and
 # https://github.com/oracle/graal/blob/master/substratevm/CONFIGURE.md
-config/%: %.jar | clean-config jenkins_up
+config/%: %.jar | jenkins_up
 	echo Inspecting $^ for $@
+	rm -rvf $@
 	mkdir -p config
 	$(NATIVE_IMAGE_AGENT) -jar $< -master 'https://www.google.com' -retry 0 || true
 	$(NATIVE_IMAGE_AGENT) -jar $< $(TEST_HELP)
-# TODO: hudson.FilePath
+	: # TODO: hudson.FilePath
 	: timeout 15 $(NATIVE_IMAGE_AGENT) -jar $< $(TEST_FULL) || [ $$? -eq 124 ]
 
-clean-config:
-	: TODO: Make native-image run as current user
-	rm -rvf config
-
+TOCLEAN += config
 NATIVE_IMAGE_AGENT = $(RUN_NATIVE_IMAGE) java -agentlib:native-image-agent=config-merge-dir=$@
 
 libsunec.so:
@@ -71,12 +69,11 @@ GRAALVM_DIR = $(shell $(RUN_NATIVE_IMAGE) find /opt -maxdepth 1 -type d -name gr
 TOCLEAN += libsunec.so
 
 jenkins_down: docker-compose.yaml
-	docker-compose down
+	docker-compose down --remove-orphans $(JENKINS_DOWN_EXTRA)
 
-clean: | clean-config
-	echo Cleaning
-	docker-compose down --remove-orphans
-	rm -rvf $(TOCLEAN) || true
+clean: | jenkins_down
+	[ -z '$(REAL_TOCLEAN)' ] || rm -rvf $(REAL_TOCLEAN)
+REAL_TOCLEAN = $(wildcard $(TOCLEAN))
 
+realclean: JENKINS_DOWN_EXTRA = --rmi local --volumes
 realclean: clean
-	docker-compose down --rmi local --volumes --remove-orphans
