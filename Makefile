@@ -64,7 +64,7 @@ clean-config:
 # TOCLEAN += config
 NATIVE_IMAGE_AGENT = $(RUN_NATIVE_IMAGE) java -agentlib:native-image-agent=config-merge-dir=$@
 
-libsunec.so: native-image.id
+libsunec.so:
 	echo Fetching $@
 	$(RUN_NATIVE_IMAGE) find /opt -name $@ -exec cp -v '{}' $@ ';'
 
