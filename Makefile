@@ -59,7 +59,7 @@ config/%: %.jar | clean-config jenkins_up
 
 clean-config:
 	: TODO: Make native-image run as current user
-	$(RUN_NATIVE_IMAGE) rm -rvf config
+	rm -rvf config
 
 # TOCLEAN += config
 NATIVE_IMAGE_AGENT = $(RUN_NATIVE_IMAGE) java -agentlib:native-image-agent=config-merge-dir=$@
@@ -68,7 +68,7 @@ libsunec.so:
 	echo Fetching $@
 	$(RUN_NATIVE_IMAGE) find /opt -name $@ -exec cp -v '{}' $@ ';'
 
-TOCLEAN += $(SUNEC)
+TOCLEAN += libsunec.so
 
 jenkins_down: docker-compose.yaml
 	docker-compose down
