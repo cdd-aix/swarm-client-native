@@ -14,8 +14,8 @@ jenkins_up: docker-compose.yaml
 CHECK_JENKINS  = curl --fail --silent --show-error --location -o /dev/null
 RETRY = --retry-connrefused --retry 3 --retry-delay 15
 RUN_NATIVE_IMAGE = docker-compose run -T native-image
-export MYUID := $(shell id -u) # used by docker-compose
-export GID := $(shell id -g)   # used by docker-compose
+export MYUID := $(shell id -u)
+export GID := $(shell id -g)
 JENKINS = http://jenkins:8080/
 
 SWARM_CLIENT = $(basename $(SWARM_CLIENT_JAR))
