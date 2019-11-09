@@ -10,6 +10,9 @@ services:
   native-image:
     build:
       context: native-image
+      args:
+        MYUID: "${MYUID:-0}"
+        GID: "${GID:-0}"
     links:
       - jenkins
       - jenkins:ci
