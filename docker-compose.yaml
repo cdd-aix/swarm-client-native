@@ -1,0 +1,23 @@
+---
+version: '3'
+services:
+  jenkins:
+    build:
+      context: jenkins
+    expose:
+      - '8080'
+      - '50000'
+  native-image:
+    build:
+      context: native-image
+      args:
+        MYUID: "${MYUID:-0}"
+        GID: "${GID:-0}"
+    links:
+      - jenkins
+      - jenkins:ci
+    # user: ${MYUID}
+    volumes:
+      - .:/out
+      - /etc/passwd:/etc/passwd:ro
+    working_dir: /out
