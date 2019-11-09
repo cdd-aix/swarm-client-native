@@ -79,5 +79,5 @@ clean: | clean-config
 	rm -rvf $(TOCLEAN) || true
 
 realclean: clean
-	docker-compose down --rmi local --volumes -remove-orphans
+	docker-compose down --rmi local --volumes --remove-orphans
 	docker image rm $$(awk '$$1=="FROM"{print $$2}' native-image/Dockerfile) || true
